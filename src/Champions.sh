@@ -7,8 +7,8 @@ if [ "$1" = "-g" ]; then
     echo "******************************"
     echo            DEV TEAM
     echo "******************************"
-    echo "      Dani pon tu nombre      "
-    echo "      Juan Peguero García     "
+    echo "     Daniel Sánchez Salvador  "
+    echo "     Juan Peguero García      "
     echo " Sistemas Operativos I - PB3  "
     echo "******************************"
     exit 0
