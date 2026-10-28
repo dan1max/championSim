@@ -91,7 +91,76 @@ function jugar_champions(){
 }
 
 function simular_partido(){
+    eqA="$1"
+    eqB="$2"
+    es_localA="$3"
+    es_final="$4"
+    
 
+    nivA="${EQ_NIV[$eqA]}"
+    nivB="${EQ_NIV[$eqB]}"
+
+    idx_A=$((RANDOM % 4))
+    idx_B=$((RANDOM % 4))
+    decA="${DEC_NOM[$idx_A]}"
+    decB="${DEC_NOM[$idx_B]}"
+
+    #de acuerdo con el enunciado, este es el desarrollo de un partido:
+
+
+    #1-Cada equpo dispondrá de 5 oportunidades para marcar un gol
+    oportA=5
+    oportB=5
+
+    if [ "$decB" = "Expulsión" ]; then oportA=$((oportA - 1)); fi
+    if [ "$decA" = "Expulsión" ]; then oportB=$((oportB - 1)); fi
+    if [ "$decB" = "Tiempo añadido" ]; then oportA=$((oportA + 1)); fi
+    if [ "$decB" = "Tiempo añadido" ]; then oportB=$((oportA + 1)); fi
+
+    # 2 el numero tope que tiene cada equipo para meter gol
+    limA=$((15 + 10 * nivA))
+    limB=$((15 + 10 * nivB))
+
+    if [ "$es_final" -eq 0]; then
+        if [ "$es_localA" -eq 1 ]; then
+            limA=$((limA + 5))
+        else
+            limB=$((limB + 5))
+        fi
+    fi
+
+    # 3oportundiades de gol: generacion de un numero aleatorio
+
+    golesA=0
+    for i in {0..oportA}; then
+        probA=$(( (RANDOM % 100) + 1))
+        if [ "$prob" -le "$limA" ]; then
+            golesA=$((golesA + 1))
+        fi
+    done
+
+
+    golesB=0
+    for j in {0..oportB}; then
+        probB=(( (RANDOM % 100) + 1))
+        if[ "$probB" -le "$limB" ]; then
+            golesB=$((golesB + 1))
+        fi
+    done
+
+    # 4despues de tirar, vemos si han decidido pitar penalti o var
+
+    if [ "$decA" = "Penalti" ]; then golesA=$((golesA + 1)); fi
+    if [ "$decB" = "Penalti" ]; then golesB=$((golesB + 1)); fi
+
+    if [ "$decA" = "VAR" ] && [ "$decB" = "VAR" ]; then
+        :
+    else
+        if [ "$decA" = "VAR" ] && [ "$golesB" -gt 0]; then golesB=$((golesB - 1)); fi
+        if [ "$decB" = "VAR" ] && [ "$golesA" -gt 0]; then golesA=$((golesA - 1)); fi
+    fi
+
+    echo "$golesA|$golesB|$decA|$decB"
 }
 
 function simular_penaltis(){
