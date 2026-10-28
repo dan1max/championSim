@@ -68,6 +68,64 @@ function cargar_datos(){
     done
 }
 
+function jugar_champions(){
+                
+    #Validaciones, limpieza de archivos y sorteo
+    if [ -z "$NOMBRE" ]; then
+        echo "Error: el nombre del jugador está vacío, abra el menú de configuración para cambiarlo."
+        return 1
+    fi
+
+    echo ""  
+    echo "**************************************************"
+    echo "                INICIANDO CHAMPIONS               "
+    echo "**************************************************"
+
+    > "$LOG"
+    > "$CLASIFICACION"
+
+    equipos_activos=($(seq 1 16 | shuf))
+
+    echo "sorteo de octavos de final hecho"
+
+}
+
+function simular_partido(){
+
+}
+
+function simular_penaltis(){
+    eqA="$1"
+    eqB="$2"
+    penA=0
+    penB=0
+
+    for numero in {1..5}; do
+        rA=$(( (RANDOM % 100) + 1 ))
+        if [ "$rA" -le 75 ]; then penA=$((penA + 1)); 
+        fi
+
+        rB=$(( (RANDOM % 100) + 1))
+        if [ "$rB" -le 75 ]; then penB=$((penB + 1));
+        fi
+    done
+
+    while [ "$penA" -eq "$penB" ]; do
+        rA=$(( (RANDOM % 100) + 1 ))
+        rB=$(( (RANDOM % 100) + 1 ))
+        if [ "$rA" -le 75 ]; then penA=$((penA + 1)); fi
+        if [ "$rB" -le 75 ]; then penB=$((penB + 1)); fi
+    done
+
+    ganador=""
+    if [ "$penA" -gt "$penB" ]; then
+        ganador="$eqA"
+    else
+        ganador="$eqB"
+    fi
+
+    echo "$penA-$penB|$ganador"
+}
 
 ###MOSTRAR_MENU_CONFIG
 menu_config(){
@@ -207,8 +265,8 @@ while true; do
             menu_config
             ;;
         J|j)
-            # BORRAR COMENTARIO: Aquí se llama a la función jugar_champions cuando la tengamos
-            echo "Opción Jugar Champions"
+            jugar_champions
+            #echo "jugar champions"
             ;;
         E|e)
             # BORRAR COMENTARIO: Aquí se llama a la función mostrar_estadisticas cuando la tengamos
@@ -230,3 +288,5 @@ while true; do
     echo "Pulse INTRO para continuar"
     read
 done
+
+
