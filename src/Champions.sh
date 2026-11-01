@@ -84,10 +84,53 @@ function jugar_champions(){
     > "$LOG"
     > "$CLASIFICACION"
 
-    equipos_activos=($(seq 1 16 | shuf))
+    for id in $(seq 1 16); do
+        GF[$id]=0
+        GC[$id]=0
+        RONDA[$id]="Octavos"
+    done 
 
-    echo "sorteo de octavos de final hecho"
+    equipos_jugando=($(seq 1 16 | shuf))
+    jugador_eliminado=0
+    echo "Sorteo de octavos realizado con éxito"
 
+    echo ""
+    echo "*****************************"
+    echo "      OCTAVOS DE FINAL       "
+    echo "*****************************"
+
+    sig_ronda=()
+
+    lim=$(( ${#equipos_jugando[@]} - 2 ))
+    for i in $(seq 0 2 "$lim"); do
+        eq1="${equipos_jugando[$i]}"
+        i_eq2=$((i + 1))
+        eq2="${equipos_jugando[$i_eq2]}"
+
+        #ida, donde el eq1 es el local
+        res_ida=$(simular_partido "$eq1" "$eq2" 1 0)
+        goles1_ida=$(echo "$res_ida" | cut -f 1 -d "|")
+        goles2_ida=$(echo "$res_ida" | cut -f 2 -d "|")
+        dec1_ida=$(echo "$res_ida" | cut -f 3 -d "|")
+        dec2_ida=$(echo "$res_ida" | cut -f 4 -d "|")
+
+        GF[$eq1]=$((GF[$eq1] + goles1_ida)); GC[$eq1]=$((GC[$eq1] + goles2_ida))
+        GF[$eq2]=$((GF[$eq2] + goles2_ida)); GC[$eq2]=$((GC[$eq2] + goles1_ida))
+
+    
+        echo "Octavos | Ida | ${EQ_NOM[$eq1]} | ${EQ_NOM[$eq2]} | $goles1_ida | $goles2_ida | $dec1_ida | $dec2_ida |" >> $"LOG"
+
+        #vuelta, lo mismo pero al reves, ahora local es eq2
+        res_ida=$(simular_partido "$eq2" "$eq1" 1 0)
+        goles2_vuelta=$(echo "$res_ida" | cut -f 1 -d "|")
+        goles1_vuelta=$(echo "$res_ida" | cut -f 2 -d "|")
+        dec2_vuelta=$(echo "$res_ida" | cut -f 3 -d "|")
+        dec1_vuelta=$(echo "$res_ida" | cut -f 4 -d "|")
+
+        GF[$eq2]=$((GF[$eq2] + goles2_vuelta)); GC[$eq2]=$((GC[$eq2] + goles1_vuelta))
+        GF[$eq1]=$((GF[$eq1] + goles1_vuelta)); GC[$eq1]=$((GC[$eq1] + goles2_vuelta))
+
+        #ahora hay que sumar, decidir el ganador y mostrar por pantalla el resultado
 }
 
 function simular_partido(){
@@ -121,7 +164,7 @@ function simular_partido(){
     limA=$((15 + 10 * nivA))
     limB=$((15 + 10 * nivB))
 
-    if [ "$es_final" -eq 0]; then
+    if [ "$es_final" -eq 0 ]; then
         if [ "$es_localA" -eq 1 ]; then
             limA=$((limA + 5))
         else
@@ -129,10 +172,10 @@ function simular_partido(){
         fi
     fi
 
-    # 3oportundiades de gol: generacion de un numero aleatorio
+    # 3 oportundiades de gol: generacion de un numero aleatorio
 
     golesA=0
-    for i in {0..oportA}; then
+    for i in $(seq 0 "$oportA"); do
         probA=$(( (RANDOM % 100) + 1))
         if [ "$prob" -le "$limA" ]; then
             golesA=$((golesA + 1))
@@ -141,9 +184,9 @@ function simular_partido(){
 
 
     golesB=0
-    for j in {0..oportB}; then
+    for j in (seq 0 "$oportB"); do
         probB=(( (RANDOM % 100) + 1))
-        if[ "$probB" -le "$limB" ]; then
+        if [ "$probB" -le "$limB" ]; then
             golesB=$((golesB + 1))
         fi
     done
@@ -357,5 +400,7 @@ while true; do
     echo "Pulse INTRO para continuar"
     read
 done
+
+
 
 
