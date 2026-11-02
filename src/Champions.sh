@@ -17,9 +17,9 @@ if [ "$1" = "-g" ]; then
 fi
 
 # BORRAR COMENTARIO: hay que cambiar "../cfg/" por "./" antes de entregar el .ZIP, ya que el enunciado exige que estén en la misma carpeta que Champions.sh
-CONFIG="./config.cfg"
-EQUIPOS="./equipos.cfg"
-DECISIONES="./decisiones.cfg"
+CONFIG="../cfg/config.cfg"
+EQUIPOS="../cfg/equipos.cfg"
+DECISIONES="../cfg/decisiones.cfg"
 
 if [ ! -f "$CONFIG" -o ! -f "$EQUIPOS" -o ! -f "$DECISIONES" ]; then
     echo "Faltan archivos clave de configuración"
@@ -68,6 +68,20 @@ function cargar_datos(){
     done
 }
 
+function randomizar_equipos(){
+    array=("$@")
+    i=$(( ${#array[@]} - 1 ))
+    local i tmp
+    while [ "$i" -gt 0 ]; do
+        j=$((RANDOM % (i + 1)))
+        tmp="${array[$i]}"
+        array[$i]="${array[$j]}"
+        array[$j]="$tmp"
+        i=$((i - 1))
+    done
+    echo "${array[@]}"
+}
+
 function jugar_champions(){
                 
     #Validaciones, limpieza de archivos y sorteo
@@ -90,7 +104,7 @@ function jugar_champions(){
         RONDA[$id]="Octavos"
     done 
 
-    equipos_jugando=($(seq 1 16 | shuf))
+    equipos_jugando=($(randomizar_equipos $(seq 1 16)))
     jugador_eliminado=0
     echo "Sorteo de octavos realizado con éxito"
 
@@ -118,7 +132,7 @@ function jugar_champions(){
         GF[$eq2]=$((GF[$eq2] + goles2_ida)); GC[$eq2]=$((GC[$eq2] + goles1_ida))
 
     
-        echo "Octavos | Ida | ${EQ_NOM[$eq1]} | ${EQ_NOM[$eq2]} | $goles1_ida | $goles2_ida | $dec1_ida | $dec2_ida |" >> $"LOG"
+        echo "Octavos | Ida | ${EQ_NOM[$eq1]} | ${EQ_NOM[$eq2]} | $goles1_ida | $goles2_ida | $dec1_ida | $dec2_ida |" >> "$LOG"
 
         #vuelta, lo mismo pero al reves, ahora local es eq2
         res_ida=$(simular_partido "$eq2" "$eq1" 1 0)
@@ -131,6 +145,42 @@ function jugar_champions(){
         GF[$eq1]=$((GF[$eq1] + goles1_vuelta)); GC[$eq1]=$((GC[$eq1] + goles2_vuelta))
 
         #ahora hay que sumar, decidir el ganador y mostrar por pantalla el resultado
+
+        total1=$((goles1_ida + goles1_vuelta))
+        total2=$((goles2_ida + goles2_vuelta))
+
+        penaltis=""
+        ganador_elim=""
+        if [ "$total1" -gt "$total2" ]; then
+            ganador_elim="$eq1"
+        elif [ "$total2" -gt "$total1" ]; then
+            ganador_elim="$eq2"
+        else
+            #ha habiado empate, recurrimos a los penaltis
+            res_pen=$(simular_penaltis "$eq1" "$eq2")
+            penaltis=$(echo "$res_pen" | cut -f 1 -d "|")
+            ganador_elim=$(echo "$res_pen" | cut -f 2 -d "|")
+        fi
+
+        echo "Octavos | vuelta | ${EQ_NOM[$eq2]} | ${EQ_NOM[$eq1]} | $goles2_vuelta | $goles1_vuelta | $dec2_vuelta | $dec1_vuelta | $penaltis" >> "$LOG"
+
+        sig_ronda+=("$ganador_elim")
+        perdedor=$([ "$ganador_elim" -eq "$eq1" ] && echo "$eq2" || echo "$eq1")
+        RONDA[$perdedor]="Octavos"
+
+        if [ "$eq1" -eq "$EQUIPO" ] || [ "$eq2" -eq "$EQUIPO" ]; then
+            echo "*********************************************************"
+            echo "Octavos de final"
+            echo "IDA: ${EQ_NOM[$eq1]} $goles1_ida - $goles2_ida ${EQ_NOM[$eq2]}"
+            echo "VUELTA: ${EQ_NOM[$eq2]} $goles2_vuelta - $goles1_vuelta ${EQ_NOM[$eq1]}"
+            echo "GLOBAL: ${EQ_NOM[$eq1]} $total1 - $total2 ${EQ_NOM[$eq2]}"
+            [ "$penaltis" != "-" ] && echo "Penaltis: $penaltis"
+            echo "Clasificado: ${EQ_NOM[$ganador_elim]}"
+            echo "*********************************************************"
+            echo "Pulsa ENTER para continuar: "
+            read
+        fi
+    done
 }
 
 function simular_partido(){
@@ -157,8 +207,8 @@ function simular_partido(){
 
     if [ "$decB" = "Expulsión" ]; then oportA=$((oportA - 1)); fi
     if [ "$decA" = "Expulsión" ]; then oportB=$((oportB - 1)); fi
-    if [ "$decB" = "Tiempo añadido" ]; then oportA=$((oportA + 1)); fi
-    if [ "$decB" = "Tiempo añadido" ]; then oportB=$((oportA + 1)); fi
+    [ "$decA" = "Tiempo añadido" ] && oportA=$((oportA + 1));
+    [ "$decB" = "Tiempo añadido" ] && oportB=$((oportB + 1))
 
     # 2 el numero tope que tiene cada equipo para meter gol
     limA=$((15 + 10 * nivA))
@@ -177,15 +227,15 @@ function simular_partido(){
     golesA=0
     for i in $(seq 0 "$oportA"); do
         probA=$(( (RANDOM % 100) + 1))
-        if [ "$prob" -le "$limA" ]; then
+        if [ "$probA" -le "$limA" ]; then
             golesA=$((golesA + 1))
         fi
     done
 
 
     golesB=0
-    for j in (seq 0 "$oportB"); do
-        probB=(( (RANDOM % 100) + 1))
+    for j in $(seq 0 "$oportB"); do
+        probB=$(( (RANDOM % 100) + 1))
         if [ "$probB" -le "$limB" ]; then
             golesB=$((golesB + 1))
         fi
@@ -199,8 +249,8 @@ function simular_partido(){
     if [ "$decA" = "VAR" ] && [ "$decB" = "VAR" ]; then
         :
     else
-        if [ "$decA" = "VAR" ] && [ "$golesB" -gt 0]; then golesB=$((golesB - 1)); fi
-        if [ "$decB" = "VAR" ] && [ "$golesA" -gt 0]; then golesA=$((golesA - 1)); fi
+        if [ "$decA" = "VAR" ] && [ "$golesB" -gt 0 ]; then golesB=$((golesB - 1)); fi
+        if [ "$decB" = "VAR" ] && [ "$golesA" -gt 0 ]; then golesA=$((golesA - 1)); fi
     fi
 
     echo "$golesA|$golesB|$decA|$decB"
