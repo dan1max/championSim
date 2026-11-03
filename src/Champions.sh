@@ -16,7 +16,6 @@ if [ "$1" = "-g" ]; then
     exit 0
 fi
 
-# BORRAR COMENTARIO: hay que cambiar "../cfg/" por "./" antes de entregar el .ZIP, ya que el enunciado exige que estén en la misma carpeta que Champions.sh
 CONFIG="./config.cfg"
 EQUIPOS="./equipos.cfg"
 DECISIONES="./decisiones.cfg"
@@ -45,6 +44,12 @@ function cargar_config(){
     VICTORIAS=$(get_config_val "VICTORIAS")
     LOG=$(get_config_val "LOG")
     CLASIFICACION=$(get_config_val "CLASIFICACION")
+
+    NO_ES_NUMERO=$(echo "$EQUIPO" | grep -v "^[0-9]*$")
+    
+    if [ -n "$NO_ES_NUMERO" ] || [ -z "$EQUIPO" ]; then
+        EQUIPO=1
+    fi
 }
 
 function guardar_config(){
@@ -82,7 +87,7 @@ function randomizar_equipos(){
     echo "${array[@]}"
 }
 
-# BORRAR COMENTARIO: He modificado simular_partido para que devuelva también los goles de las oportunidades y si hubo penal/var, necesario para mostrar el detalle por pantalla. Además, he cambiado seq 0 a seq 1, ya que de 0 a 5 son 6 oportunidades, y el enunciado pide 5.
+
 function simular_partido(){
     eqA="$1"
     eqB="$2"
@@ -187,7 +192,7 @@ function simular_penaltis(){
     echo "$penA-$penB|$ganador"
 }
 
-# BORRAR COMENTARIO: Función auxiliar para pintar los resultados de la ida, vuelta o final del jugador tal como se muestra en el ejemplo del enunciado.
+
 function pintar_desglose_partido() {
     tipo_p="$1"; eq1="$2"; eq2="$3"
     gA="$4"; gB="$5"; d1="$6"; d2="$7"; opA="$8"; opB="$9"; p1="${10}"; p2="${11}"; v1="${12}"; v2="${13}"
@@ -231,7 +236,7 @@ function jugar_champions(){
     jugador_eliminado=0
     campeon_torneo=""
 
-    # BORRAR COMENTARIO: Se crea un bucle general de 4 iteraciones para hacer las 4 rondas automáticamente
+    
     NOMBRES_RONDAS=("Octavos" "Cuartos" "Semifinales" "Final")
     TITULOS_RONDAS=("Octavos de final" "Cuartos de final" "Semifinales" "Final")
 
@@ -252,7 +257,7 @@ function jugar_champions(){
             i_eq2=$((i + 1))
             eq2="${equipos_jugando[$i_eq2]}"
             
-            # BORRAR COMENTARIO: Si no es la final, es eliminatoria a doble partido
+            
             if [ "$R_NOM" != "Final" ]; then
                 # ida, donde el eq1 es el local
                 res_ida=$(simular_partido "$eq1" "$eq2" 1 0)
@@ -318,7 +323,7 @@ function jugar_champions(){
                 fi
 
             else
-                # BORRAR COMENTARIO: Bloque para la final a partido único
+                
                 res_fin=$(simular_partido "$eq1" "$eq2" 0 1)
                 g1_f=$(echo "$res_fin" | cut -f 1 -d "|"); g2_f=$(echo "$res_fin" | cut -f 2 -d "|")
                 d1_f=$(echo "$res_fin" | cut -f 3 -d "|"); d2_f=$(echo "$res_fin" | cut -f 4 -d "|")
@@ -374,7 +379,7 @@ function jugar_champions(){
         fi
     done
 
-    # BORRAR COMENTARIO: Ordenación de la clasificación. Al no haber arrays asociativos fáciles de ordenar en bash 3.0, usamos un algoritmo de selección (selection sort) puro con las comparaciones indicadas en el PDF.
+    
     for id in $(seq 1 16); do DG[$id]=$(( GF[$id] - GC[$id] )); USADO[$id]=0; done
     for pos in $(seq 1 16); do
         mejor=0
@@ -416,7 +421,7 @@ function jugar_champions(){
     echo "========================================="
 }
 
-# BORRAR COMENTARIO: Función de estadísticas pedida. Extrae todo de los archivos de Log y Clasificación mediante contadores, grep, cut y bucles for (todo de T1 a T5).
+
 function menu_estadisticas() {
     if [ ! -s "$CLASIFICACION" ] || [ ! -s "$LOG" ]; then
         echo "No hay datos estadísticos. Debes jugar una Champions primero."
