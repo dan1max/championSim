@@ -17,9 +17,9 @@ if [ "$1" = "-g" ]; then
 fi
 
 # BORRAR COMENTARIO: hay que cambiar "../cfg/" por "./" antes de entregar el .ZIP, ya que el enunciado exige que estén en la misma carpeta que Champions.sh
-CONFIG="../cfg/config.cfg"
-EQUIPOS="../cfg/equipos.cfg"
-DECISIONES="../cfg/decisiones.cfg"
+CONFIG="./config.cfg"
+EQUIPOS="./equipos.cfg"
+DECISIONES="./decisiones.cfg"
 
 if [ ! -f "$CONFIG" -o ! -f "$EQUIPOS" -o ! -f "$DECISIONES" ]; then
     echo "Faltan archivos clave de configuración"
@@ -82,114 +82,13 @@ function randomizar_equipos(){
     echo "${array[@]}"
 }
 
-function jugar_champions(){
-                
-    #Validaciones, limpieza de archivos y sorteo
-    if [ -z "$NOMBRE" ]; then
-        echo "Error: el nombre del jugador está vacío, abra el menú de configuración para cambiarlo."
-        return 1
-    fi
-
-    echo ""  
-    echo "**************************************************"
-    echo "                INICIANDO CHAMPIONS               "
-    echo "**************************************************"
-
-    > "$LOG"
-    > "$CLASIFICACION"
-
-    for id in $(seq 1 16); do
-        GF[$id]=0
-        GC[$id]=0
-        RONDA[$id]="Octavos"
-    done 
-
-    equipos_jugando=($(randomizar_equipos $(seq 1 16)))
-    jugador_eliminado=0
-    echo "Sorteo de octavos realizado con éxito"
-
-    echo ""
-    echo "*****************************"
-    echo "      OCTAVOS DE FINAL       "
-    echo "*****************************"
-
-    sig_ronda=()
-
-    lim=$(( ${#equipos_jugando[@]} - 2 ))
-    for i in $(seq 0 2 "$lim"); do
-        eq1="${equipos_jugando[$i]}"
-        i_eq2=$((i + 1))
-        eq2="${equipos_jugando[$i_eq2]}"
-
-        #ida, donde el eq1 es el local
-        res_ida=$(simular_partido "$eq1" "$eq2" 1 0)
-        goles1_ida=$(echo "$res_ida" | cut -f 1 -d "|")
-        goles2_ida=$(echo "$res_ida" | cut -f 2 -d "|")
-        dec1_ida=$(echo "$res_ida" | cut -f 3 -d "|")
-        dec2_ida=$(echo "$res_ida" | cut -f 4 -d "|")
-
-        GF[$eq1]=$((GF[$eq1] + goles1_ida)); GC[$eq1]=$((GC[$eq1] + goles2_ida))
-        GF[$eq2]=$((GF[$eq2] + goles2_ida)); GC[$eq2]=$((GC[$eq2] + goles1_ida))
-
-    
-        echo "Octavos | Ida | ${EQ_NOM[$eq1]} | ${EQ_NOM[$eq2]} | $goles1_ida | $goles2_ida | $dec1_ida | $dec2_ida |" >> "$LOG"
-
-        #vuelta, lo mismo pero al reves, ahora local es eq2
-        res_ida=$(simular_partido "$eq2" "$eq1" 1 0)
-        goles2_vuelta=$(echo "$res_ida" | cut -f 1 -d "|")
-        goles1_vuelta=$(echo "$res_ida" | cut -f 2 -d "|")
-        dec2_vuelta=$(echo "$res_ida" | cut -f 3 -d "|")
-        dec1_vuelta=$(echo "$res_ida" | cut -f 4 -d "|")
-
-        GF[$eq2]=$((GF[$eq2] + goles2_vuelta)); GC[$eq2]=$((GC[$eq2] + goles1_vuelta))
-        GF[$eq1]=$((GF[$eq1] + goles1_vuelta)); GC[$eq1]=$((GC[$eq1] + goles2_vuelta))
-
-        #ahora hay que sumar, decidir el ganador y mostrar por pantalla el resultado
-
-        total1=$((goles1_ida + goles1_vuelta))
-        total2=$((goles2_ida + goles2_vuelta))
-
-        penaltis=""
-        ganador_elim=""
-        if [ "$total1" -gt "$total2" ]; then
-            ganador_elim="$eq1"
-        elif [ "$total2" -gt "$total1" ]; then
-            ganador_elim="$eq2"
-        else
-            #ha habiado empate, recurrimos a los penaltis
-            res_pen=$(simular_penaltis "$eq1" "$eq2")
-            penaltis=$(echo "$res_pen" | cut -f 1 -d "|")
-            ganador_elim=$(echo "$res_pen" | cut -f 2 -d "|")
-        fi
-
-        echo "Octavos | vuelta | ${EQ_NOM[$eq2]} | ${EQ_NOM[$eq1]} | $goles2_vuelta | $goles1_vuelta | $dec2_vuelta | $dec1_vuelta | $penaltis" >> "$LOG"
-
-        sig_ronda+=("$ganador_elim")
-        perdedor=$([ "$ganador_elim" -eq "$eq1" ] && echo "$eq2" || echo "$eq1")
-        RONDA[$perdedor]="Octavos"
-
-        if [ "$eq1" -eq "$EQUIPO" ] || [ "$eq2" -eq "$EQUIPO" ]; then
-            echo "*********************************************************"
-            echo "Octavos de final"
-            echo "IDA: ${EQ_NOM[$eq1]} $goles1_ida - $goles2_ida ${EQ_NOM[$eq2]}"
-            echo "VUELTA: ${EQ_NOM[$eq2]} $goles2_vuelta - $goles1_vuelta ${EQ_NOM[$eq1]}"
-            echo "GLOBAL: ${EQ_NOM[$eq1]} $total1 - $total2 ${EQ_NOM[$eq2]}"
-            [ "$penaltis" != "-" ] && echo "Penaltis: $penaltis"
-            echo "Clasificado: ${EQ_NOM[$ganador_elim]}"
-            echo "*********************************************************"
-            echo "Pulsa ENTER para continuar: "
-            read
-        fi
-    done
-}
-
+# BORRAR COMENTARIO: He modificado simular_partido para que devuelva también los goles de las oportunidades y si hubo penal/var, necesario para mostrar el detalle por pantalla. Además, he cambiado seq 0 a seq 1, ya que de 0 a 5 son 6 oportunidades, y el enunciado pide 5.
 function simular_partido(){
     eqA="$1"
     eqB="$2"
     es_localA="$3"
     es_final="$4"
     
-
     nivA="${EQ_NIV[$eqA]}"
     nivB="${EQ_NIV[$eqB]}"
 
@@ -198,10 +97,7 @@ function simular_partido(){
     decA="${DEC_NOM[$idx_A]}"
     decB="${DEC_NOM[$idx_B]}"
 
-    #de acuerdo con el enunciado, este es el desarrollo de un partido:
-
-
-    #1-Cada equpo dispondrá de 5 oportunidades para marcar un gol
+    # 1-Cada equipo dispondrá de 5 oportunidades para marcar un gol
     oportA=5
     oportB=5
 
@@ -222,38 +118,43 @@ function simular_partido(){
         fi
     fi
 
-    # 3 oportundiades de gol: generacion de un numero aleatorio
-
-    golesA=0
-    for i in $(seq 0 "$oportA"); do
+    # 3 oportunidades de gol
+    golesOP_A=0
+    for i in $(seq 1 "$oportA"); do
         probA=$(( (RANDOM % 100) + 1))
         if [ "$probA" -le "$limA" ]; then
-            golesA=$((golesA + 1))
+            golesOP_A=$((golesOP_A + 1))
         fi
     done
 
-
-    golesB=0
-    for j in $(seq 0 "$oportB"); do
+    golesOP_B=0
+    for j in $(seq 1 "$oportB"); do
         probB=$(( (RANDOM % 100) + 1))
         if [ "$probB" -le "$limB" ]; then
-            golesB=$((golesB + 1))
+            golesOP_B=$((golesOP_B + 1))
         fi
     done
 
-    # 4despues de tirar, vemos si han decidido pitar penalti o var
+    golesA=$golesOP_A
+    golesB=$golesOP_B
+    penA=0
+    penB=0
 
-    if [ "$decA" = "Penalti" ]; then golesA=$((golesA + 1)); fi
-    if [ "$decB" = "Penalti" ]; then golesB=$((golesB + 1)); fi
+    # 4 despues de tirar, vemos si han decidido pitar penalti o var
+    if [ "$decA" = "Penalti" ]; then golesA=$((golesA + 1)); penA=1; fi
+    if [ "$decB" = "Penalti" ]; then golesB=$((golesB + 1)); penB=1; fi
 
+    varA=0
+    varB=0
     if [ "$decA" = "VAR" ] && [ "$decB" = "VAR" ]; then
         :
     else
-        if [ "$decA" = "VAR" ] && [ "$golesB" -gt 0 ]; then golesB=$((golesB - 1)); fi
-        if [ "$decB" = "VAR" ] && [ "$golesA" -gt 0 ]; then golesA=$((golesA - 1)); fi
+        if [ "$decA" = "VAR" ] && [ "$golesB" -gt 0 ]; then golesB=$((golesB - 1)); varA=1; fi
+        if [ "$decB" = "VAR" ] && [ "$golesA" -gt 0 ]; then golesA=$((golesA - 1)); varB=1; fi
     fi
 
-    echo "$golesA|$golesB|$decA|$decB"
+    # Devolvemos todos los datos separados por |
+    echo "$golesA|$golesB|$decA|$decB|$golesOP_A|$golesOP_B|$penA|$penB|$varA|$varB"
 }
 
 function simular_penaltis(){
@@ -264,12 +165,9 @@ function simular_penaltis(){
 
     for numero in {1..5}; do
         rA=$(( (RANDOM % 100) + 1 ))
-        if [ "$rA" -le 75 ]; then penA=$((penA + 1)); 
-        fi
-
+        if [ "$rA" -le 75 ]; then penA=$((penA + 1)); fi
         rB=$(( (RANDOM % 100) + 1))
-        if [ "$rB" -le 75 ]; then penB=$((penB + 1));
-        fi
+        if [ "$rB" -le 75 ]; then penB=$((penB + 1)); fi
     done
 
     while [ "$penA" -eq "$penB" ]; do
@@ -287,6 +185,338 @@ function simular_penaltis(){
     fi
 
     echo "$penA-$penB|$ganador"
+}
+
+# BORRAR COMENTARIO: Función auxiliar para pintar los resultados de la ida, vuelta o final del jugador tal como se muestra en el ejemplo del enunciado.
+function pintar_desglose_partido() {
+    tipo_p="$1"; eq1="$2"; eq2="$3"
+    gA="$4"; gB="$5"; d1="$6"; d2="$7"; opA="$8"; opB="$9"; p1="${10}"; p2="${11}"; v1="${12}"; v2="${13}"
+
+    echo "$tipo_p: ${EQ_NOM[$eq1]} $gA - $gB ${EQ_NOM[$eq2]}"
+    echo "Decisiones: $d1 | $d2"
+    echo "Goles tras las oportunidades: $opA - $opB"
+    [ "$p1" -eq 1 ] && echo "Penalti: +1 ${EQ_NOM[$eq1]}"
+    [ "$p2" -eq 1 ] && echo "Penalti: +1 ${EQ_NOM[$eq2]}"
+    if [ "$d1" = "VAR" ] && [ "$d2" = "VAR" ]; then
+        echo "VAR: Sin efecto"
+    else
+        [ "$v1" -eq 1 ] && echo "VAR: -1 ${EQ_NOM[$eq2]}"
+        [ "$v2" -eq 1 ] && echo "VAR: -1 ${EQ_NOM[$eq1]}"
+    fi
+}
+
+function jugar_champions(){
+    #Validaciones, limpieza de archivos y sorteo
+    if [ -z "$NOMBRE" ]; then
+        echo "Error: el nombre del jugador está vacío, abra el menú de configuración para cambiarlo."
+        return 1
+    fi
+
+    echo ""  
+    echo "**************************************************"
+    echo "                INICIANDO CHAMPIONS               "
+    echo "**************************************************"
+
+    cat /dev/null > "$LOG"
+    cat /dev/null > "$CLASIFICACION"
+
+    for id in $(seq 1 16); do
+        GF[$id]=0
+        GC[$id]=0
+        RONDA[$id]="Octavos"
+        PESO_RONDA[$id]=1
+    done 
+
+    equipos_jugando=($(randomizar_equipos $(seq 1 16)))
+    jugador_eliminado=0
+    campeon_torneo=""
+
+    # BORRAR COMENTARIO: Se crea un bucle general de 4 iteraciones para hacer las 4 rondas automáticamente
+    NOMBRES_RONDAS=("Octavos" "Cuartos" "Semifinales" "Final")
+    TITULOS_RONDAS=("Octavos de final" "Cuartos de final" "Semifinales" "Final")
+
+    for r_idx in 0 1 2 3; do
+        R_NOM="${NOMBRES_RONDAS[$r_idx]}"
+        R_TIT="${TITULOS_RONDAS[$r_idx]}"
+        
+        echo ""
+        echo "*****************************"
+        echo "      $R_TIT       "
+        echo "*****************************"
+
+        sig_ronda=()
+        lim=$(( ${#equipos_jugando[@]} - 2 ))
+        
+        for i in $(seq 0 2 "$lim"); do
+            eq1="${equipos_jugando[$i]}"
+            i_eq2=$((i + 1))
+            eq2="${equipos_jugando[$i_eq2]}"
+            
+            # BORRAR COMENTARIO: Si no es la final, es eliminatoria a doble partido
+            if [ "$R_NOM" != "Final" ]; then
+                # ida, donde el eq1 es el local
+                res_ida=$(simular_partido "$eq1" "$eq2" 1 0)
+                g1_i=$(echo "$res_ida" | cut -f 1 -d "|"); g2_i=$(echo "$res_ida" | cut -f 2 -d "|")
+                d1_i=$(echo "$res_ida" | cut -f 3 -d "|"); d2_i=$(echo "$res_ida" | cut -f 4 -d "|")
+                op1_i=$(echo "$res_ida" | cut -f 5 -d "|"); op2_i=$(echo "$res_ida" | cut -f 6 -d "|")
+                p1_i=$(echo "$res_ida" | cut -f 7 -d "|"); p2_i=$(echo "$res_ida" | cut -f 8 -d "|")
+                v1_i=$(echo "$res_ida" | cut -f 9 -d "|"); v2_i=$(echo "$res_ida" | cut -f 10 -d "|")
+
+                GF[$eq1]=$((GF[$eq1] + g1_i)); GC[$eq1]=$((GC[$eq1] + g2_i))
+                GF[$eq2]=$((GF[$eq2] + g2_i)); GC[$eq2]=$((GC[$eq2] + g1_i))
+            
+                echo "$R_NOM | Ida | ${EQ_NOM[$eq1]} | ${EQ_NOM[$eq2]} | $g1_i | $g2_i | $d1_i | $d2_i | -" >> "$LOG"
+
+                # vuelta, lo mismo pero al reves, ahora local es eq2
+                res_vue=$(simular_partido "$eq2" "$eq1" 1 0)
+                g2_v=$(echo "$res_vue" | cut -f 1 -d "|"); g1_v=$(echo "$res_vue" | cut -f 2 -d "|")
+                d2_v=$(echo "$res_vue" | cut -f 3 -d "|"); d1_v=$(echo "$res_vue" | cut -f 4 -d "|")
+                op2_v=$(echo "$res_vue" | cut -f 5 -d "|"); op1_v=$(echo "$res_vue" | cut -f 6 -d "|")
+                p2_v=$(echo "$res_vue" | cut -f 7 -d "|"); p1_v=$(echo "$res_vue" | cut -f 8 -d "|")
+                v2_v=$(echo "$res_vue" | cut -f 9 -d "|"); v1_v=$(echo "$res_vue" | cut -f 10 -d "|")
+
+                GF[$eq2]=$((GF[$eq2] + g2_v)); GC[$eq2]=$((GC[$eq2] + g1_v))
+                GF[$eq1]=$((GF[$eq1] + g1_v)); GC[$eq1]=$((GC[$eq1] + g2_v))
+
+                total1=$((g1_i + g1_v))
+                total2=$((g2_i + g2_v))
+
+                penaltis="-"
+                ganador_elim=""
+                if [ "$total1" -gt "$total2" ]; then
+                    ganador_elim="$eq1"
+                elif [ "$total2" -gt "$total1" ]; then
+                    ganador_elim="$eq2"
+                else
+                    # En la vuelta el Eq A era eq2
+                    res_pen=$(simular_penaltis "$eq2" "$eq1")
+                    penaltis=$(echo "$res_pen" | cut -f 1 -d "|")
+                    ganador_elim=$(echo "$res_pen" | cut -f 2 -d "|")
+                fi
+
+                echo "$R_NOM | Vuelta | ${EQ_NOM[$eq2]} | ${EQ_NOM[$eq1]} | $g2_v | $g1_v | $d2_v | $d1_v | $penaltis" >> "$LOG"
+
+                sig_ronda+=("$ganador_elim")
+                perdedor=$([ "$ganador_elim" -eq "$eq1" ] && echo "$eq2" || echo "$eq1")
+                RONDA[$perdedor]="$R_NOM"
+                PESO_RONDA[$perdedor]=$((r_idx + 1))
+
+                if [ "$eq1" -eq "$EQUIPO" ] || [ "$eq2" -eq "$EQUIPO" ]; then
+                    echo "*********************************************************"
+                    echo "$R_TIT"
+                    echo "${EQ_NOM[$eq1]} vs ${EQ_NOM[$eq2]}"
+                    echo ""
+                    pintar_desglose_partido "IDA" "$eq1" "$eq2" "$g1_i" "$g2_i" "$d1_i" "$d2_i" "$op1_i" "$op2_i" "$p1_i" "$p2_i" "$v1_i" "$v2_i"
+                    echo ""
+                    pintar_desglose_partido "VUELTA" "$eq2" "$eq1" "$g2_v" "$g1_v" "$d2_v" "$d1_v" "$op2_v" "$op1_v" "$p2_v" "$p1_v" "$v2_v" "$v1_v"
+                    echo ""
+                    echo "GLOBAL: ${EQ_NOM[$eq1]} $total1 - $total2 ${EQ_NOM[$eq2]}"
+                    [ "$penaltis" != "-" ] && echo "Penaltis: $penaltis"
+                    echo "Clasificado: ${EQ_NOM[$ganador_elim]}"
+                    echo "*********************************************************"
+                    if [ "$perdedor" -eq "$EQUIPO" ]; then jugador_eliminado=1; fi
+                fi
+
+            else
+                # BORRAR COMENTARIO: Bloque para la final a partido único
+                res_fin=$(simular_partido "$eq1" "$eq2" 0 1)
+                g1_f=$(echo "$res_fin" | cut -f 1 -d "|"); g2_f=$(echo "$res_fin" | cut -f 2 -d "|")
+                d1_f=$(echo "$res_fin" | cut -f 3 -d "|"); d2_f=$(echo "$res_fin" | cut -f 4 -d "|")
+                op1_f=$(echo "$res_fin" | cut -f 5 -d "|"); op2_f=$(echo "$res_fin" | cut -f 6 -d "|")
+                p1_f=$(echo "$res_fin" | cut -f 7 -d "|"); p2_f=$(echo "$res_fin" | cut -f 8 -d "|")
+                v1_f=$(echo "$res_fin" | cut -f 9 -d "|"); v2_f=$(echo "$res_fin" | cut -f 10 -d "|")
+
+                GF[$eq1]=$((GF[$eq1] + g1_f)); GC[$eq1]=$((GC[$eq1] + g2_f))
+                GF[$eq2]=$((GF[$eq2] + g2_f)); GC[$eq2]=$((GC[$eq2] + g1_f))
+
+                penaltis="-"
+                if [ "$g1_f" -gt "$g2_f" ]; then
+                    ganador_elim="$eq1"
+                elif [ "$g2_f" -gt "$g1_f" ]; then
+                    ganador_elim="$eq2"
+                else
+                    res_pen=$(simular_penaltis "$eq1" "$eq2")
+                    penaltis=$(echo "$res_pen" | cut -f 1 -d "|")
+                    ganador_elim=$(echo "$res_pen" | cut -f 2 -d "|")
+                fi
+
+                echo "Final | Final | ${EQ_NOM[$eq1]} | ${EQ_NOM[$eq2]} | $g1_f | $g2_f | $d1_f | $d2_f | $penaltis" >> "$LOG"
+
+                perdedor=$([ "$ganador_elim" -eq "$eq1" ] && echo "$eq2" || echo "$eq1")
+                RONDA[$perdedor]="Final"
+                PESO_RONDA[$perdedor]=4
+                RONDA[$ganador_elim]="Campeón"
+                PESO_RONDA[$ganador_elim]=5
+                campeon_torneo="$ganador_elim"
+
+                if [ "$eq1" -eq "$EQUIPO" ] || [ "$eq2" -eq "$EQUIPO" ]; then
+                    echo "*********************************************************"
+                    echo "$R_TIT"
+                    echo "${EQ_NOM[$eq1]} vs ${EQ_NOM[$eq2]}"
+                    echo ""
+                    pintar_desglose_partido "FINAL" "$eq1" "$eq2" "$g1_f" "$g2_f" "$d1_f" "$d2_f" "$op1_f" "$op2_f" "$p1_f" "$p2_f" "$v1_f" "$v2_f"
+                    echo ""
+                    [ "$penaltis" != "-" ] && echo "Penaltis: $penaltis"
+                    echo "Campeón: ${EQ_NOM[$ganador_elim]}"
+                    echo "*********************************************************"
+                fi
+            fi
+        done
+
+        equipos_jugando=("${sig_ronda[@]}")
+        
+        # Pausa solo si el jugador sigue vivo y no es la final
+        if [ "$jugador_eliminado" -eq 0 ] && [ "$R_NOM" != "Final" ]; then
+            echo "Pulsa ENTER para pasar a la siguiente ronda: "
+            read
+        elif [ "$jugador_eliminado" -eq 1 ] && [ "$R_NOM" != "Final" ]; then
+            echo "Simulando el resto del torneo..."
+        fi
+    done
+
+    # BORRAR COMENTARIO: Ordenación de la clasificación. Al no haber arrays asociativos fáciles de ordenar en bash 3.0, usamos un algoritmo de selección (selection sort) puro con las comparaciones indicadas en el PDF.
+    for id in $(seq 1 16); do DG[$id]=$(( GF[$id] - GC[$id] )); USADO[$id]=0; done
+    for pos in $(seq 1 16); do
+        mejor=0
+        for cand in $(seq 1 16); do
+            if [ ${USADO[$cand]} -eq 0 ]; then
+                if [ "$mejor" -eq 0 ]; then mejor=$cand; else
+                    cambiar=0
+                    if [ ${PESO_RONDA[$cand]} -gt ${PESO_RONDA[$mejor]} ]; then cambiar=1
+                    elif [ ${PESO_RONDA[$cand]} -eq ${PESO_RONDA[$mejor]} ]; then
+                        if [ ${DG[$cand]} -gt ${DG[$mejor]} ]; then cambiar=1
+                        elif [ ${DG[$cand]} -eq ${DG[$mejor]} ]; then
+                            if [ ${GF[$cand]} -gt ${GF[$mejor]} ]; then cambiar=1
+                            elif [ ${GF[$cand]} -eq ${GF[$mejor]} ]; then
+                                # Desempate alfabético con sort y head (T3)
+                                pri=$( (echo "${EQ_NOM[$cand]}"; echo "${EQ_NOM[$mejor]}") | sort | head -1 )
+                                [ "$pri" = "${EQ_NOM[$cand]}" ] && cambiar=1
+                            fi
+                        fi
+                    fi
+                    [ "$cambiar" -eq 1 ] && mejor=$cand
+                fi
+            fi
+        done
+        USADO[$mejor]=1
+        echo "$pos | ${EQ_NOM[$mejor]} | ${RONDA[$mejor]} | ${GF[$mejor]} | ${GC[$mejor]} | ${DG[$mejor]}" >> "$CLASIFICACION"
+    done
+
+    # Si tu equipo es el campeón, súmale 1 título
+    if [ "$campeon_torneo" -eq "$EQUIPO" ]; then
+        VICTORIAS=$((VICTORIAS + 1))
+        guardar_config
+    fi
+
+    echo ""
+    echo "========================================="
+    echo "      TORNEO FINALIZADO                  "
+    echo " Campeón: ${EQ_NOM[$campeon_torneo]}"
+    echo " Ronda de ${EQ_NOM[$EQUIPO]}: ${RONDA[$EQUIPO]}"
+    echo "========================================="
+}
+
+# BORRAR COMENTARIO: Función de estadísticas pedida. Extrae todo de los archivos de Log y Clasificación mediante contadores, grep, cut y bucles for (todo de T1 a T5).
+function menu_estadisticas() {
+    if [ ! -s "$CLASIFICACION" ] || [ ! -s "$LOG" ]; then
+        echo "No hay datos estadísticos. Debes jugar una Champions primero."
+        return 0
+    fi
+
+    n_clas=$(cat "$CLASIFICACION" | wc -l)
+    n_log=$(cat "$LOG" | wc -l)
+
+    campeon_st=""
+    finalista_st=""
+    ronda_jug_st=""
+    max_gf=-1
+    max_gc=-1
+
+    for i in $(seq 1 "$n_clas"); do
+        lin=$(head -$i < "$CLASIFICACION" | tail -1)
+        nom_c=$(echo "$lin" | cut -d "|" -f 2 | sed 's/^ *//;s/ *$//')
+        ron_c=$(echo "$lin" | cut -d "|" -f 3 | sed 's/^ *//;s/ *$//')
+        gf_c=$(echo "$lin" | cut -d "|" -f 4 | sed 's/^ *//;s/ *$//')
+        gc_c=$(echo "$lin" | cut -d "|" -f 5 | sed 's/^ *//;s/ *$//')
+
+        [ "$ron_c" = "Campeón" ] && campeon_st="$nom_c"
+        [ "$ron_c" = "Final" ] && finalista_st="$nom_c"
+        [ "$nom_c" = "${EQ_NOM[$EQUIPO]}" ] && ronda_jug_st="$ron_c"
+        [ "$gf_c" -gt "$max_gf" ] && max_gf=$gf_c
+        [ "$gc_c" -gt "$max_gc" ] && max_gc=$gc_c
+    done
+
+    echo "**************************************************"
+    echo "            ESTADÍSTICAS DEL TORNEO               "
+    echo "**************************************************"
+    echo " - Campeón: $campeon_st"
+    echo " - Finalista: $finalista_st"
+    
+    echo " - Equipo(s) más goleador(es) [$max_gf goles]:"
+    for i in $(seq 1 "$n_clas"); do
+        lin=$(head -$i < "$CLASIFICACION" | tail -1)
+        nom_c=$(echo "$lin" | cut -d "|" -f 2 | sed 's/^ *//;s/ *$//')
+        gf_c=$(echo "$lin" | cut -d "|" -f 4 | sed 's/^ *//;s/ *$//')
+        [ "$gf_c" -eq "$max_gf" ] && echo "     * $nom_c"
+    done
+
+    echo " - Equipo(s) más goleado(s) [$max_gc goles]:"
+    for i in $(seq 1 "$n_clas"); do
+        lin=$(head -$i < "$CLASIFICACION" | tail -1)
+        nom_c=$(echo "$lin" | cut -d "|" -f 2 | sed 's/^ *//;s/ *$//')
+        gc_c=$(echo "$lin" | cut -d "|" -f 5 | sed 's/^ *//;s/ *$//')
+        [ "$gc_c" -eq "$max_gc" ] && echo "     * $nom_c"
+    done
+
+    echo " - Ronda de tu equipo (${EQ_NOM[$EQUIPO]}): $ronda_jug_st"
+
+    max_g_partido=-1
+    c_dec=(0 0 0 0)
+    tot_pen=0
+
+    for i in $(seq 1 "$n_log"); do
+        lin=$(head -$i < "$LOG" | tail -1)
+        g_a=$(echo "$lin" | cut -d "|" -f 5 | sed 's/^ *//;s/ *$//')
+        g_b=$(echo "$lin" | cut -d "|" -f 6 | sed 's/^ *//;s/ *$//')
+        d_a=$(echo "$lin" | cut -d "|" -f 7 | sed 's/^ *//;s/ *$//')
+        d_b=$(echo "$lin" | cut -d "|" -f 8 | sed 's/^ *//;s/ *$//')
+        pen=$(echo "$lin" | cut -d "|" -f 9 | sed 's/^ *//;s/ *$//')
+
+        suma=$((g_a + g_b))
+        [ "$suma" -gt "$max_g_partido" ] && max_g_partido=$suma
+        [ "$pen" != "-" ] && tot_pen=$((tot_pen + 1))
+
+        for k in 0 1 2 3; do
+            [ "$d_a" = "${DEC_NOM[$k]}" ] && c_dec[$k]=$((c_dec[$k] + 1))
+            [ "$d_b" = "${DEC_NOM[$k]}" ] && c_dec[$k]=$((c_dec[$k] + 1))
+        done
+    done
+
+    echo " - Partido(s) con más goles [$max_g_partido goles en total]:"
+    for i in $(seq 1 "$n_log"); do
+        lin=$(head -$i < "$LOG" | tail -1)
+        ron=$(echo "$lin" | cut -d "|" -f 1 | sed 's/^ *//;s/ *$//')
+        par=$(echo "$lin" | cut -d "|" -f 2 | sed 's/^ *//;s/ *$//')
+        eq_a=$(echo "$lin" | cut -d "|" -f 3 | sed 's/^ *//;s/ *$//')
+        eq_b=$(echo "$lin" | cut -d "|" -f 4 | sed 's/^ *//;s/ *$//')
+        g_a=$(echo "$lin" | cut -d "|" -f 5 | sed 's/^ *//;s/ *$//')
+        g_b=$(echo "$lin" | cut -d "|" -f 6 | sed 's/^ *//;s/ *$//')
+        suma=$((g_a + g_b))
+        [ "$suma" -eq "$max_g_partido" ] && echo "     * $ron ($par): $eq_a $g_a - $g_b $eq_b"
+    done
+
+    max_freq=-1
+    for k in 0 1 2 3; do
+        [ "${c_dec[$k]}" -gt "$max_freq" ] && max_freq=${c_dec[$k]}
+    done
+
+    echo " - Decisión más frecuente [$max_freq apariciones]:"
+    for k in 0 1 2 3; do
+        [ "${c_dec[$k]}" -eq "$max_freq" ] && echo "     * ${DEC_NOM[$k]}"
+    done
+
+    echo " - Eliminatorias decididas por penaltis: $tot_pen"
+    echo "**************************************************"
 }
 
 ###MOSTRAR_MENU_CONFIG
@@ -428,11 +658,9 @@ while true; do
             ;;
         J|j)
             jugar_champions
-            #echo "jugar champions"
             ;;
         E|e)
-            # BORRAR COMENTARIO: Aquí se llama a la función mostrar_estadisticas cuando la tengamos
-            echo "Opción Estadísticas"
+            menu_estadisticas
             ;;
         R|r)
             menu_reinicio
@@ -450,7 +678,3 @@ while true; do
     echo "Pulse INTRO para continuar"
     read
 done
-
-
-
-
