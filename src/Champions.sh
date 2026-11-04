@@ -30,12 +30,11 @@ if [ ! -r "$CONFIG" -o ! -w "$CONFIG" -o ! -r "$EQUIPOS" -o ! -r "$DECISIONES" ]
     exit 1
 fi
 
-
 ###FUNCIONES AUXILIARES DE CONFIGURACION
 
 function get_config_val(){
     key="$1"
-    grep "^${key}=" < "$CONFIG" | cut -f 2 -d "=" #esto busca la linea que empiece por "nombre" y luego extrae el valor detras del =
+    grep "^${key}=" < "$CONFIG" | cut -f 2 -d "="
 }
 
 function cargar_config(){
@@ -65,12 +64,15 @@ function guardar_config(){
 }
 
 function cargar_datos(){
-    for id in $(seq 1 16); do
+    local id=1
+    while [ "$id" -le 16 ]; do
         linea=$(grep "^${id}|" < "$EQUIPOS")
         EQ_NOM[$id]=$(echo "$linea" | cut -f 2 -d "|")
         EQ_NIV[$id]=$(echo "$linea" | cut -f 3 -d "|")
+        id=$((id + 1))
     done
 
+    local i
     for i in 1 2 3 4; do
         linea_d=$(head -$i < "$DECISIONES" | tail -1)
         DEC_NOM[$((i - 1))]=$(echo "$linea_d" | cut -f 1 -d "|")
@@ -134,20 +136,24 @@ function simular_partido(){
 
     local golesOP_A=0
     local probA
-    for i in $(seq 1 "$oportA"); do
+    local i=1
+    while [ "$i" -le "$oportA" ]; do
         probA=$(( (RANDOM % 100) + 1))
         if [ "$probA" -le "$limA" ]; then
             golesOP_A=$((golesOP_A + 1))
         fi
+        i=$((i + 1))
     done
 
     local golesOP_B=0
     local probB
-    for j in $(seq 1 "$oportB"); do
+    local j=1
+    while [ "$j" -le "$oportB" ]; do
         probB=$(( (RANDOM % 100) + 1))
         if [ "$probB" -le "$limB" ]; then
             golesOP_B=$((golesOP_B + 1))
         fi
+        j=$((j + 1))
     done
 
     local golesA=$golesOP_A
@@ -178,7 +184,8 @@ function simular_penaltis(){
 
     local rA
     local rB
-    for numero in {1..5}; do
+    local numero
+    for numero in 1 2 3 4 5; do
         rA=$(( (RANDOM % 100) + 1 ))
         if [ "$rA" -le 75 ]; then penA=$((penA + 1)); fi
         rB=$(( (RANDOM % 100) + 1))
@@ -246,20 +253,23 @@ function jugar_champions(){
     cat /dev/null > "$LOG"
     cat /dev/null > "$CLASIFICACION"
 
-    for id in $(seq 1 16); do
+    local id=1
+    while [ "$id" -le 16 ]; do
         GF[$id]=0
         GC[$id]=0
         RONDA[$id]="Octavos"
         PESO_RONDA[$id]=1
+        id=$((id + 1))
     done 
 
-    equipos_jugando=($(randomizar_equipos $(seq 1 16)))
+    equipos_jugando=($(randomizar_equipos 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16))
     jugador_eliminado=0
     campeon_torneo=""
 
     NOMBRES_RONDAS=("Octavos" "Cuartos" "Semifinales" "Final")
     TITULOS_RONDAS=("Octavos de final" "Cuartos de final" "Semifinales" "Final")
 
+    local r_idx
     for r_idx in 0 1 2 3; do
         equipos_jugando=($(randomizar_equipos "${equipos_jugando[@]}"))
         R_NOM="${NOMBRES_RONDAS[$r_idx]}"
@@ -273,7 +283,8 @@ function jugar_champions(){
         sig_ronda=()
         lim=$(( ${#equipos_jugando[@]} - 2 ))
         
-        for i in $(seq 0 2 "$lim"); do
+        local i=0
+        while [ "$i" -le "$lim" ]; do
             eq1="${equipos_jugando[$i]}"
             i_eq2=$((i + 1))
             eq2="${equipos_jugando[$i_eq2]}"
@@ -395,6 +406,7 @@ function jugar_champions(){
                     echo "*********************************************************"
                 fi
             fi
+            i=$((i + 2))
         done
 
         equipos_jugando=("${sig_ronda[@]}")
@@ -410,10 +422,18 @@ function jugar_champions(){
         fi
     done
 
-    for id in $(seq 1 16); do DG[$id]=$(( GF[$id] - GC[$id] )); USADO[$id]=0; done
-    for pos in $(seq 1 16); do
+    local id=1
+    while [ "$id" -le 16 ]; do
+        DG[$id]=$(( GF[$id] - GC[$id] ))
+        USADO[$id]=0
+        id=$((id + 1))
+    done
+
+    local pos=1
+    while [ "$pos" -le 16 ]; do
         mejor=0
-        for cand in $(seq 1 16); do
+        local cand=1
+        while [ "$cand" -le 16 ]; do
             if [ ${USADO[$cand]} -eq 0 ]; then
                 if [ "$mejor" -eq 0 ]; then 
                     mejor=$cand
@@ -433,9 +453,11 @@ function jugar_champions(){
                     if [ "$cambiar" -eq 1 ]; then mejor=$cand; fi
                 fi
             fi
+            cand=$((cand + 1))
         done
         USADO[$mejor]=1
         echo "$pos | ${EQ_NOM[$mejor]} | ${RONDA[$mejor]} | ${GF[$mejor]} | ${GC[$mejor]} | ${DG[$mejor]}" >> "$CLASIFICACION"
+        pos=$((pos + 1))
     done
 
     if [ "$campeon_torneo" -eq "$EQUIPO" ]; then
@@ -466,7 +488,8 @@ function menu_estadisticas() {
     max_gf=-1
     max_gc=-1
 
-    for i in $(seq 1 "$n_clas"); do
+    local i=1
+    while [ "$i" -le "$n_clas" ]; do
         lin=$(head -$i < "$CLASIFICACION" | tail -1)
         nom_c=$(limpiar_espacios "$(echo "$lin" | cut -d "|" -f 2)")
         ron_c=$(limpiar_espacios "$(echo "$lin" | cut -d "|" -f 3)")
@@ -478,6 +501,7 @@ function menu_estadisticas() {
         if [ "$nom_c" = "${EQ_NOM[$EQUIPO]}" ]; then ronda_jug_st="$ron_c"; fi
         if [ "$gf_c" -gt "$max_gf" ]; then max_gf=$gf_c; fi
         if [ "$gc_c" -gt "$max_gc" ]; then max_gc=$gc_c; fi
+        i=$((i + 1))
     done
 
     echo "**************************************************"
@@ -487,19 +511,23 @@ function menu_estadisticas() {
     echo " - Finalista: $finalista_st"
     
     echo " - Equipo(s) más goleador(es) [$max_gf goles]:"
-    for i in $(seq 1 "$n_clas"); do
+    i=1
+    while [ "$i" -le "$n_clas" ]; do
         lin=$(head -$i < "$CLASIFICACION" | tail -1)
         nom_c=$(limpiar_espacios "$(echo "$lin" | cut -d "|" -f 2)")
         gf_c=$(limpiar_espacios "$(echo "$lin" | cut -d "|" -f 4)")
         if [ "$gf_c" -eq "$max_gf" ]; then echo "     * $nom_c"; fi
+        i=$((i + 1))
     done
 
     echo " - Equipo(s) más goleado(s) [$max_gc goles]:"
-    for i in $(seq 1 "$n_clas"); do
+    i=1
+    while [ "$i" -le "$n_clas" ]; do
         lin=$(head -$i < "$CLASIFICACION" | tail -1)
         nom_c=$(limpiar_espacios "$(echo "$lin" | cut -d "|" -f 2)")
         gc_c=$(limpiar_espacios "$(echo "$lin" | cut -d "|" -f 5)")
         if [ "$gc_c" -eq "$max_gc" ]; then echo "     * $nom_c"; fi
+        i=$((i + 1))
     done
 
     echo " - Ronda de tu equipo (${EQ_NOM[$EQUIPO]}): $ronda_jug_st"
@@ -508,7 +536,8 @@ function menu_estadisticas() {
     c_dec=(0 0 0 0)
     tot_pen=0
 
-    for i in $(seq 1 "$n_log"); do
+    i=1
+    while [ "$i" -le "$n_log" ]; do
         lin=$(head -$i < "$LOG" | tail -1)
         g_a=$(limpiar_espacios "$(echo "$lin" | cut -d "|" -f 5)")
         g_b=$(limpiar_espacios "$(echo "$lin" | cut -d "|" -f 6)")
@@ -520,14 +549,17 @@ function menu_estadisticas() {
         if [ "$suma" -gt "$max_g_partido" ]; then max_g_partido=$suma; fi
         if [ "$pen" != "-" ]; then tot_pen=$((tot_pen + 1)); fi
 
+        local k
         for k in 0 1 2 3; do
             if [ "$d_a" = "${DEC_NOM[$k]}" ]; then c_dec[$k]=$((c_dec[$k] + 1)); fi
             if [ "$d_b" = "${DEC_NOM[$k]}" ]; then c_dec[$k]=$((c_dec[$k] + 1)); fi
         done
+        i=$((i + 1))
     done
 
     echo " - Partido(s) con más goles [$max_g_partido goles en total]:"
-    for i in $(seq 1 "$n_log"); do
+    i=1
+    while [ "$i" -le "$n_log" ]; do
         lin=$(head -$i < "$LOG" | tail -1)
         ron=$(limpiar_espacios "$(echo "$lin" | cut -d "|" -f 1)")
         par=$(limpiar_espacios "$(echo "$lin" | cut -d "|" -f 2)")
@@ -539,9 +571,11 @@ function menu_estadisticas() {
         if [ "$suma" -eq "$max_g_partido" ]; then
             echo "     * $ron ($par): $eq_a $g_a - $g_b $eq_b"
         fi
+        i=$((i + 1))
     done
 
     max_freq=-1
+    local k
     for k in 0 1 2 3; do
         if [ "${c_dec[$k]}" -gt "$max_freq" ]; then
             max_freq=${c_dec[$k]}
@@ -558,7 +592,6 @@ function menu_estadisticas() {
     echo " - Eliminatorias decididas por penaltis: $tot_pen"
     echo "**************************************************"
 }
-
 
 ###MOSTRAR_MENU_CONFIG
 menu_config(){
