@@ -322,7 +322,7 @@ function jugar_champions(){
                 elif [ "$total2" -gt "$total1" ]; then
                     ganador_elim="$eq2"
                 else
-                    res_pen=$(simular_penaltis "$eq2" "$eq1")
+                    res_pen=$(simular_penaltis "$eq1" "$eq2")
                     penaltis=$(echo "$res_pen" | cut -f 1 -d "|")
                     ganador_elim=$(echo "$res_pen" | cut -f 2 -d "|")
                 fi
