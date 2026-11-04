@@ -50,6 +50,12 @@ function cargar_config(){
     if [ -n "$NO_ES_NUMERO" ] || [ -z "$EQUIPO" ]; then
         EQUIPO=1
     fi
+
+    if ! grep -q "^${EQUIPO}|" "$EQUIPOS"; then
+        EQUIPO=1
+    fi #porsi se modifica el archivo desde fuera
+
+
 }
 
 function guardar_config(){
@@ -74,37 +80,39 @@ function cargar_datos(){
 }
 
 function randomizar_equipos(){
-    array=("$@")
-    i=$(( ${#array[@]} - 1 ))
-    local i tmp
-    while [ "$i" -gt 0 ]; do
-        j=$((RANDOM % (i + 1)))
-        tmp="${array[$i]}"
-        array[$i]="${array[$j]}"
-        array[$j]="$tmp"
-        i=$((i - 1))
+    local i j temp
+    local arr=("$@")
+
+    i=$((${#arr[@]} - 1))
+    while(( i > 0 )); do
+        j=$((RANDOM % (i+1)))
+        temp="${arr[$i]}"
+        arr[$i]="${arr[$j]}"
+        arr[$j]="$temp"
+
+        ((i--))
     done
-    echo "${array[@]}"
+    echo "${arr[@]}"
 }
 
 
 function simular_partido(){
-    eqA="$1"
-    eqB="$2"
+    local eqA="$1"
+    local eqB="$2"
     es_localA="$3"
     es_final="$4"
     
-    nivA="${EQ_NIV[$eqA]}"
-    nivB="${EQ_NIV[$eqB]}"
+    local nivA="${EQ_NIV[$eqA]}"
+    local nivB="${EQ_NIV[$eqB]}"
 
     idx_A=$((RANDOM % 4))
     idx_B=$((RANDOM % 4))
-    decA="${DEC_NOM[$idx_A]}"
-    decB="${DEC_NOM[$idx_B]}"
+    local decA="${DEC_NOM[$idx_A]}"
+    local decB="${DEC_NOM[$idx_B]}"
 
     # 1-Cada equipo dispondrá de 5 oportunidades para marcar un gol
-    oportA=5
-    oportB=5
+    local oportA=5
+    local oportB=5
 
     if [ "$decB" = "Expulsión" ]; then oportA=$((oportA - 1)); fi
     if [ "$decA" = "Expulsión" ]; then oportB=$((oportB - 1)); fi
@@ -163,10 +171,10 @@ function simular_partido(){
 }
 
 function simular_penaltis(){
-    eqA="$1"
-    eqB="$2"
-    penA=0
-    penB=0
+    local eqA="$1"
+    local eqB="$2"
+    local penA=0
+    local enB=0
 
     for numero in {1..5}; do
         rA=$(( (RANDOM % 100) + 1 ))
@@ -194,8 +202,19 @@ function simular_penaltis(){
 
 
 function pintar_desglose_partido() {
-    tipo_p="$1"; eq1="$2"; eq2="$3"
-    gA="$4"; gB="$5"; d1="$6"; d2="$7"; opA="$8"; opB="$9"; p1="${10}"; p2="${11}"; v1="${12}"; v2="${13}"
+    local tipo_p="$1" #declaramos las variables como locales para que no interfieran con las de la funcion jugar_champions, ya que antes afectaba a la salida y daba resultados invertidos
+    local eq1="$2"
+    local eq2="$3"
+    local gA="$4"
+    local gB="$5"
+    local d1="$6"
+    local d2="$7"
+    local opA="$8"
+    local opB="$9"
+    local p1="${10}"
+    local p2="${11}"
+    local v1="${12}"
+    local v2="${13}"
 
     echo "$tipo_p: ${EQ_NOM[$eq1]} $gA - $gB ${EQ_NOM[$eq2]}"
     echo "Decisiones: $d1 | $d2"
@@ -241,6 +260,7 @@ function jugar_champions(){
     TITULOS_RONDAS=("Octavos de final" "Cuartos de final" "Semifinales" "Final")
 
     for r_idx in 0 1 2 3; do
+        equipos_jugando=($(randomizar_equipos "${equipos_jugando[@]}"))
         R_NOM="${NOMBRES_RONDAS[$r_idx]}"
         R_TIT="${TITULOS_RONDAS[$r_idx]}"
         
@@ -282,6 +302,8 @@ function jugar_champions(){
 
                 GF[$eq2]=$((GF[$eq2] + g2_v)); GC[$eq2]=$((GC[$eq2] + g1_v))
                 GF[$eq1]=$((GF[$eq1] + g1_v)); GC[$eq1]=$((GC[$eq1] + g2_v))
+
+
 
                 total1=$((g1_i + g1_v))
                 total2=$((g2_i + g2_v))
@@ -393,7 +415,7 @@ function jugar_champions(){
                         elif [ ${DG[$cand]} -eq ${DG[$mejor]} ]; then
                             if [ ${GF[$cand]} -gt ${GF[$mejor]} ]; then cambiar=1
                             elif [ ${GF[$cand]} -eq ${GF[$mejor]} ]; then
-                                # Desempate alfabético con sort y head (T3)
+                                # Desempate alfabético con sort y head 
                                 pri=$( (echo "${EQ_NOM[$cand]}"; echo "${EQ_NOM[$mejor]}") | sort | head -1 )
                                 [ "$pri" = "${EQ_NOM[$cand]}" ] && cambiar=1
                             fi
